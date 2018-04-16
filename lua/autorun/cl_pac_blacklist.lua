@@ -88,11 +88,6 @@ if ( CLIENT ) then
         file.Write( "pac_blacklist.txt", util.TableToJSON( pac_blacklist, true ) )
     end
     
-    -- Writes the current blacklisted players out to the blacklist file in a JSON-encoded string
-    local function writeToFile()
-        file.Write( "pac_blacklist.txt", util.TableToJSON( pac_blacklist, true ) )
-    end
-    
     --[[
         Reads the JSON data from the blacklist file and returns a table.
         If the file doesn't exist, is empty, or formatted improperly, an empty
