@@ -1,3 +1,9 @@
+--[[
+    Author: Mista-Tea (STEAM_0:0:27507323)
+    Created: April 15th, 2018
+    Last Updated: April 16th, 2018
+--]]
+
 if ( CLIENT ) then
     
     local file = file
@@ -62,21 +68,27 @@ if ( CLIENT ) then
     -- PAC Blacklist Functions
     --------------------------------------------------------------------------]]--
     
+    -- Global table to hold our blacklist (this file can be reloaded without losing blacklisted players)
     pac_blacklist = pac_blacklist or {}
     
-    local debug = CreateClientConVar( "pac_blacklist_debug", 1, true, false )
+    local debug = CreateClientConVar( "pac_blacklist_debug", 1, true, false, "Prints helpful information when using PAC blacklist functions" )
     
+    -- Prints some error info to console (always shown)
     local function showError( err )
         MsgC( Color(255,100,100), "[ERROR] pac_blacklist: " .. err .. "\n" )
     end
     
+    -- Prints some debug info to console, enabled by default
     local function showInfo( str )
         if ( debug:GetBool() ) then MsgC( Color(100,255,100), "[INFO] pac_blacklist: "  .. str .. "\n" ) end
     end
     
-    --[[
-        Writes the current blacklisted players out to the blacklist file in a JSON-encoded string
-    --]]
+    -- Writes the current blacklisted players out to the blacklist file in a JSON-encoded string
+    local function writeToFile()
+        file.Write( "pac_blacklist.txt", util.TableToJSON( pac_blacklist, true ) )
+    end
+    
+    -- Writes the current blacklisted players out to the blacklist file in a JSON-encoded string
     local function writeToFile()
         file.Write( "pac_blacklist.txt", util.TableToJSON( pac_blacklist, true ) )
     end
@@ -97,6 +109,7 @@ if ( CLIENT ) then
         end
     end
     
+    -- Uses PAC's functionality to toggle the player's PAC visibility
     local function setPACVisible( ply, bool )
         pac.TogglePartDrawing( ply, bool )
     end
@@ -106,6 +119,7 @@ if ( CLIENT ) then
         their PAC visibility will be disabled.
     --]]
     local function addToBlacklist( id, name )
+        if ( isentity( id ) ) then
             local ply = id
             id   = ply:SteamID()
             name = ply:Nick()
@@ -120,6 +134,7 @@ if ( CLIENT ) then
         their PAC visibility will be enabled.
     --]]
     local function removeFromBlacklist( id )
+        if ( isentity( id ) ) then
             local ply = id
             setPACVisible( ply, true )
             id = ply:SteamID()
@@ -157,6 +172,10 @@ if ( CLIENT ) then
         
         removeFromBlacklist( target )
         writeToFile( pac_blacklist )
+        
+        -- If the outfit was outright blocked from being created (i.e. player connected after you),
+        -- we'll need to ask the server to give it to us so we can actually show it
+        RunConsoleCommand( "pac_request_outfits" )
     end )
     
     -- Remove all users from the blacklist and write the changes to disk
@@ -168,6 +187,10 @@ if ( CLIENT ) then
         end
         pac_blacklist = {}
         writeToFile()
+        
+        -- If the outfit was outright blocked from being created (i.e. player connected after you),
+        -- we'll need to ask the server to give it to us so we can actually show it
+        RunConsoleCommand( "pac_request_outfits" )
     end )
     
     --[[--------------------------------------------------------------------------
@@ -186,8 +209,8 @@ if ( CLIENT ) then
     
     -- Listen for when other players initialize on the server and check if they are on the blacklist
     hook.Add( "NetworkEntityCreated", "pac_blacklist_block", function( ent )
-        -- Client isn't fully valid until the next frame
-        timer.Simple( 0, function()
+        -- Client isn't fully valid at first
+        timer.Simple( 1, function()
             if ( not IsValid( ent ) or not ent:IsPlayer() ) then return end
             
             if ( pac_blacklist[ent:SteamID()] ) then
@@ -197,4 +220,19 @@ if ( CLIENT ) then
         end )
     end )
     
+    -- Block blacklisted players' PACs if they try to wear them
+    hook.Add( "pace_WearPartFromServer", "pac_blacklist_block", function( owner, part_data, data )
+        if ( pac_blacklist[owner:SteamID()] ) then
+            return false
+        end
+    end )
+    
+    hook.Add( "pac_Enable", "pac_blacklist_block", function()
+        for id, _ in pairs( pac_blacklist or {} ) do
+            local ply = player.GetBySteamID( id )
+            if ( IsValid( ply ) ) then
+                setPACVisible( ply )
+            end
+        end
+    end )
 end
