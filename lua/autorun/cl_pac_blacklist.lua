@@ -94,7 +94,7 @@ if ( CLIENT ) then
         table will be returned instead.
     --]]
     local function readFromFile()
-        if ( not file.Exists( "pac_blacklist.txt", "DATA" ) ) then return "[]" end
+        if ( not file.Exists( "pac_blacklist.txt", "DATA" ) ) then return {} end
         
         local json = file.Read( "pac_blacklist.txt", "DATA" )
         if ( json:Trim() == "" ) then
