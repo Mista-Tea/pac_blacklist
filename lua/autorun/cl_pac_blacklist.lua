@@ -217,6 +217,8 @@ if ( CLIENT ) then
     
     -- Block blacklisted players' PACs if they try to wear them
     hook.Add( "pace_WearPartFromServer", "pac_blacklist_block", function( owner, part_data, data )
+        if ( not IsValid( owner ) ) then return end
+        
         if ( pac_blacklist[owner:SteamID()] ) then
             return false
         end
